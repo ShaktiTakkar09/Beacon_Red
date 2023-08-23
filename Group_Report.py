@@ -41,8 +41,8 @@ st.sidebar.header("Filters")
 
 # Date Range Filter
 st.sidebar.subheader("Date Filter")
-start_date = st.sidebar.date_input("Start Date", dashboard_df['Date'].min(), max_value=dashboard_df['Date'].max())
-end_date = st.sidebar.date_input("End Date", dashboard_df['Date'].max(), min_value=start_date)
+start_date = st.sidebar.date_input("Start Date", min_value=dashboard_df['Date'].min(), max_value=dashboard_df['Date'].max(), value=dashboard_df['Date'].min())
+end_date = st.sidebar.date_input("End Date", min_value=dashboard_df['Date'].min(), max_value=dashboard_df['Date'].max(), value=dashboard_df['Date'].max())
 
 # Age Range Filter
 st.sidebar.subheader("Age Filter")

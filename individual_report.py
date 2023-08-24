@@ -1,9 +1,11 @@
-
 import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
+
+# Print the version of Seaborn
+print("Seaborn Version:", sns.__version__)
 
 # Define the download_figure function
 def download_figure(figure, filename):
@@ -16,9 +18,12 @@ def download_figure(figure, filename):
 dashboard_df = pd.read_excel('./Dashboard_Data.xlsx')
 
 
+# Convert 'Date' column to date data type
+dashboard_df['Date'] = pd.to_datetime(dashboard_df['Date']).dt.date
 
 # Set Seaborn style
 sns.set(style="whitegrid")
+sns.set(font_scale=0.8)
 
 # Streamlit app
 st.set_page_config(
@@ -28,19 +33,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-primaryColor = '#FF8C02' # Bright Orange
-
-backgroundColor = '#00325B' # Dark Blue
-
-secondaryBackgroundColor = '#55B2FF' # Lighter Blue
-
-st.title("Individual Report")
-# Sidebar filters
-st.sidebar.header("Filters")
+# Title
+st.markdown("<h1 style='font-size: 24px;'>Individual Report</h1>", unsafe_allow_html=True)
 
 # Dropdown to select candidate
 candidate_ids = dashboard_df['ID'].unique()
-selected_candidate = st.sidebar.selectbox("Select Candidate", candidate_ids)
+selected_candidate = st.selectbox("Select Candidate", candidate_ids)
 
 # Filter data for the selected candidate
 candidate_data = dashboard_df[dashboard_df['ID'] == selected_candidate]
@@ -48,177 +46,140 @@ candidate_data = dashboard_df[dashboard_df['ID'] == selected_candidate]
 if not candidate_data.empty:
     candidate_data = candidate_data.iloc[0]
 
-    # Display candidate overview
-    st.header("Candidate Overview")
+    # Section 1: Candidate Overview
+    st.markdown("<h2 style='font-size: 20px;'>1. Candidate Overview</h2>", unsafe_allow_html=True)
     st.write(f"**ID:** {candidate_data['ID']}")
     st.write(f"**Gender:** {candidate_data['Gender']}")
     st.write(f"**Age:** {candidate_data['Age']}")
     st.write(f"**Position:** {candidate_data['Position']}")
 
-    # Create containers for different visualizations
-    container_1 = st.container()
-    container_2 = st.container()
-    container_3 = st.container()
-    container_4 = st.container()
-    container_5 = st.container()
-    container_6 = st.container()
+# Section 2: Cognitive Ability
+st.markdown("<h2 style='font-size: 20px;'>2. Cognitive Ability</h2>", unsafe_allow_html=True)
 
-    # Visualization 1: Cognitive Ability Comparison
-    with container_1:
-        st.header("Cognitive Ability Comparison")
-        
-        # Filter inputs
-        min_age, max_age = st.sidebar.slider("Select Age Range", min_value=dashboard_df['Age'].min(), max_value=dashboard_df['Age'].max(), value=(dashboard_df['Age'].min(), dashboard_df['Age'].max()))
-        selected_positions = st.sidebar.multiselect("Select Positions", dashboard_df['Position'].unique())
-        selected_genders = st.sidebar.multiselect("Select Genders", dashboard_df['Gender'].unique())
 
-        # Apply filters
-        filtered_data = dashboard_df[
-            (dashboard_df['Age'] >= min_age) & (dashboard_df['Age'] <= max_age) &
-            (dashboard_df['Position'].isin(selected_positions)) &
-            (dashboard_df['Gender'].isin(selected_genders))
-        ]
+# Define the cognitive columns
+cognitive_columns = ['Attention to Detail', 'Logical Reasoning', 'Numerical Reasoning', 'Verbal Reasoning']
 
-        # Extract cognitive ability scores for the selected candidate
-        cognitive_columns = ['Logical Reasoning', 'Numerical Reasoning', 'Verbal Reasoning']
-        selected_cognitive_scores = candidate_data[cognitive_columns].values[0]
+candidate_data = dashboard_df[dashboard_df['ID'] == selected_candidate]
 
-        # Calculate average cognitive ability scores of all candidates
-        average_cognitive_scores = filtered_data[cognitive_columns].mean()
+if not candidate_data.empty:
+    # Extract the cognitive scores for the selected candidate
+    selected_cognitive_scores = candidate_data[cognitive_columns]
 
-        # Create a DataFrame to hold the scores for plotting
-        comparison_df = pd.DataFrame({'Cognitive Ability': cognitive_columns,
-                                      'Selected Candidate': selected_cognitive_scores,
-                                      'Average Candidate': average_cognitive_scores})
+    # Create a DataFrame for visualization
+    cognitive_df = pd.DataFrame({'Cognitive Ability': cognitive_columns, 'Score': selected_cognitive_scores.values[0]})
 
-        # Create a bar plot
-        plt.figure(figsize=(8, 4))
-        sns.set_palette("pastel")
-        sns.barplot(data=comparison_df, x='Cognitive Ability', y='Selected Candidate', label='Selected Candidate')
-        sns.barplot(data=comparison_df, x='Cognitive Ability', y='Average Candidate', label='Average Candidate', alpha=0.5)
-        plt.xlabel("Cognitive Ability")
-        plt.ylabel("Score")
-        plt.title("Cognitive Ability Comparison")
-        plt.legend()
-
-        # Pass the figure to st.pyplot()
-        st.pyplot(plt.gcf())
-
-        # Download the figure
-        download_figure(plt.gcf(), "cognitive_ability_comparison.png")
-# Visualization 2: Performance Benchmarking
-with container_2:
-    st.header("Performance Benchmarking")
-    
-    # Apply filters to data
-    filtered_data = dashboard_df[
-        (dashboard_df['Age'] >= min_age) & (dashboard_df['Age'] <= max_age) &
-        (dashboard_df['Position'].isin(selected_positions)) &
-        (dashboard_df['Gender'].isin(selected_genders))
-    ]
-    
-    # Calculate average scores for each cognitive ability
-    average_scores = filtered_data[['Logical Reasoning', 'Numerical Reasoning', 'Verbal Reasoning']].mean()
-    
-    # Create a bar plot for benchmarking
-    plt.figure(figsize=(8,4))
+    # Set up the plot
+    plt.figure(figsize=(12, 4))
     sns.set_palette("pastel")
-    sns.barplot(data=average_scores.reset_index(), x='index', y=0)
+
+    # Create a bar plot for cognitive abilities
+    sns.barplot(data=cognitive_df, x='Cognitive Ability', y='Score')
     plt.xlabel("Cognitive Ability")
-    plt.ylabel("Average Score")
-    plt.title("Performance Benchmarking")
+    plt.ylabel("Score")
+    plt.title("Cognitive Ability Breakdown")
     plt.xticks(rotation=45)
-    
-    # Pass the figure to st.pyplot()
-    st.pyplot(plt.gcf())
-    
-    # Download the figure
-    download_figure(plt.gcf(), "performance_benchmarking.png")
 
-# Visualization 3: Personality Traits
-with container_3:
-    st.header("Personality Traits")
-    
-    # Apply filters to data
-    filtered_data = dashboard_df[
-        (dashboard_df['Age'] >= min_age) & (dashboard_df['Age'] <= max_age) &
-        (dashboard_df['Position'].isin(selected_positions)) &
-        (dashboard_df['Gender'].isin(selected_genders))
-    ]
-    
-    # Create a bar plot for personality traits
-    personality_traits = candidate_data[['Openness', 'Conscientiousness', 'Extraversion', 'Agreeableness', 'Neuroticism']]
-    plt.figure(figsize=(8,4))
+    # Display the plot using Streamlit
+    st.pyplot(plt.gcf())
+
+# Section 3: Performance benchmarking
+st.markdown("<h2 style='font-size: 20px;'>2. Performance Benchmarking</h2>", unsafe_allow_html=True)
+
+
+if not candidate_data.empty:
+    # Extract the overall score for the selected candidate
+    selected_overall_score = candidate_data['Overall'].mean()
+
+    # Calculate the average overall score for all candidates
+    average_overall_score = dashboard_df['Overall'].mean()
+
+    # Set up the plot
+    plt.figure(figsize=(12, 4))
     sns.set_palette("pastel")
-    sns.barplot(data=personality_traits.reset_index(), x='index', y=0)
+
+    # Create a bar plot for benchmarking
+    ax = sns.barplot(data=pd.DataFrame({'Performance': ['Selected Candidate', 'Average Candidate'],
+                                        'Score': [selected_overall_score, average_overall_score]}),
+                     x='Performance', y='Score')
+    plt.xlabel("Performance")
+    plt.ylabel("Score")
+    plt.title("Performance Benchmarking")
+    plt.ylim(0, 100)  # Assuming the score is on a percentage scale
+    plt.xticks(rotation=45)
+
+    # Display average scores above the bars
+    for p in ax.patches:
+        ax.annotate(f"{p.get_height():.2f}", (p.get_x() + p.get_width() / 2., p.get_height()),
+                    ha='center', va='center', xytext=(0, 10), textcoords='offset points')
+
+    # Display the plot using Streamlit
+    st.pyplot(plt.gcf())
+# Section 4: Personality Traits
+st.markdown("<h2 style='font-size: 20px;'>4. Personality Traits</h2>", unsafe_allow_html=True)
+
+# Filter data for the selected candidate
+candidate_personality_data = dashboard_df[dashboard_df['ID'] == selected_candidate]
+
+if not candidate_personality_data.empty:
+    # Extract personality trait scores for the selected candidate
+    personality_columns = ['Openness', 'Conscientiousness', 'Extraversion', 'Agreeableness', 'Neuroticism']
+    selected_personality_scores = candidate_personality_data[personality_columns]
+
+    # Create a DataFrame for visualization
+    personality_df = pd.DataFrame({'Personality Trait': personality_columns, 'Score': selected_personality_scores.values[0]})
+
+    # Set up the plot
+    plt.figure(figsize=(12, 4))
+    sns.set_palette("pastel")
+
+    # Create a bar plot for personality traits
+    sns.barplot(data=personality_df, x='Personality Trait', y='Score')
     plt.xlabel("Personality Trait")
     plt.ylabel("Score")
-    plt.title("Personality Traits")
+    plt.title("Personality Traits Analysis")
+    plt.ylim(0, 100)  # Assuming the score is on a percentage scale
     plt.xticks(rotation=45)
-    
-    # Pass the figure to st.pyplot()
+
+    # Display the plot using Streamlit
     st.pyplot(plt.gcf())
-    
-    # Download the figure
-    download_figure(plt.gcf(), "personality_traits.png")
+else:
+    st.write("No data available for the selected candidate.")
 
-# Visualization 4: IQ Score Analysis
-with container_4:
-    st.header("IQ Score Analysis")
+# Section 5: IQ Score Analysis
+st.markdown("<h2 style='font-size: 20px;'>5. IQ Score Analysis</h2>", unsafe_allow_html=True)
 
-    # Apply filters to data based on age, gender, and position
-    filtered_data_age = dashboard_df[
-        (dashboard_df['Age'] >= min_age) & (dashboard_df['Age'] <= max_age)
-    ]
-    
-    filtered_data_gender = dashboard_df[
-        (dashboard_df['Gender'] == candidate_data['Gender'])
-    ]
-    
-    filtered_data_position = dashboard_df[
-        (dashboard_df['Position'] == candidate_data['Position'])
-    ]
+# Filter input for position
+selected_position_iq = st.selectbox("Select Position for IQ Score Analysis", dashboard_df['Position'].unique(), key="iq_position")
 
-    
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
-    sns.set_palette("pastel")
-    
-    for ax, filter_name, filtered_data in zip(axes, ['Age', 'Gender', 'Position'], [filtered_data_age, filtered_data_gender, filtered_data_position]):
-        sns.histplot(data=filtered_data, x='IQ', bins=10, kde=True, ax=ax)
-        ax.set_title(f"{filter_name} Filter", fontsize=12)
-        ax.set_xlabel("IQ Score", fontsize=10)
-        ax.set_ylabel("Frequency", fontsize=10)
-        ax.tick_params(axis='both', which='major', labelsize=8)
-    
-    plt.tight_layout()
-    st.pyplot(fig)
-    download_figure(fig, "iq_score_distribution_filters.png")
+# Filter data for the selected candidate and position
+filtered_candidate_data_iq = dashboard_df[(dashboard_df['ID'] == selected_candidate) & (dashboard_df['Position'] == selected_position_iq)]
 
-    # Create a histogram for IQ scores in the dataset with position filter
-    plt.figure(figsize=(10, 6))
-    sns.set_palette("pastel")
-    sns.histplot(data=filtered_data_position, x='IQ', bins=10, kde=True)
+# Display IQ score analysis for the selected candidate and position
+if not filtered_candidate_data_iq.empty:
+    candidate_iq_score = filtered_candidate_data_iq['IQ'].iloc[0]  # Access the scalar value
+    average_iq_score = filtered_candidate_data_iq['IQ'].mean()
 
+    st.write(f"**Candidate's IQ Score:** {candidate_iq_score}")
+    st.write(f"**Average IQ Score for Position '{selected_position_iq}':** {average_iq_score}")
 
-        # Visualization 5: Recommendation Status
-# Visualization 5: Recommendation Status
-with container_5:
-    st.header("Recommendation Summary")
-    
-    # Apply filters
-    filtered_data = dashboard_df[
-        (dashboard_df['Age'] >= min_age) & (dashboard_df['Age'] <= max_age) &
-        (dashboard_df['Position'].isin(selected_positions)) &
-        (dashboard_df['Gender'].isin(selected_genders))
-    ]
-    
-    # Filter input for threshold
-    threshold = st.slider("Set Threshold for Recommendation", min_value=0, max_value=100, value=80)
-    
-    # Display recommendation status
-    if candidate_data['Overall'] >= threshold:
+# Section 6: Recommendation Status
+st.markdown("<h2 style='font-size: 20px;'>6. Recommendation Status</h2>", unsafe_allow_html=True)
+
+# Filter input for position and threshold
+selected_position_recommendation = st.selectbox("Select Position for Recommendation", dashboard_df['Position'].unique(), key="recommendation_position")
+threshold = st.slider("Set Threshold for Recommendation", min_value=0, max_value=100, value=80, key="recommendation_threshold")
+
+# Filter data for the selected candidate and position
+filtered_candidate_data_recommendation = dashboard_df[(dashboard_df['ID'] == selected_candidate) & (dashboard_df['Position'] == selected_position_recommendation)]
+
+# Display recommendation status for the selected candidate and position
+if not filtered_candidate_data_recommendation.empty:
+    candidate_overall_score = filtered_candidate_data_recommendation['Overall'].iloc[0]  # Access the scalar value
+
+    if candidate_overall_score >= threshold:
         recommendation_status = "Recommended"
     else:
         recommendation_status = "Not Recommended"
-    
-    st.write(f"Based on the threshold of {threshold}, the candidate is **{recommendation_status}** for the role.")
+
+    st.write(f"Based on the threshold of {threshold}, the candidate for position '{selected_position_recommendation}' is **{recommendation_status}**.")
